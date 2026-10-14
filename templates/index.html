@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FilePilot · Organizer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="{{ url_for('index') }}"><span class="brand-icon">F</span><span>FilePilot<small>SMART FILE WORKSPACE</small></span></a>
+    <div class="nav-label">WORKSPACE</div>
+    <a class="nav-item active" href="{{ url_for('index') }}"><span>▦</span> Overview</a>
+    <a class="nav-item" href="#duplicates"><span>◈</span> Duplicate finder</a>
+    <a class="nav-item" href="#organize"><span>↗</span> File organizer</a>
+    <a class="nav-item" href="{{ url_for('history') }}"><span>◷</span> Scan history</a>
+    <div class="sidebar-bottom"><div class="shield">✓</div><b>Your files stay local</b><p>Scans run on this computer. Nothing is uploaded by this app.</p></div>
+  </aside>
+  <main class="main-content">
+    <header class="topbar"><div><div class="eyebrow">FILE INTELLIGENCE</div><h1>Workspace overview</h1></div><span class="local-pill"><i></i> Local workspace</span></header>
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-wrap">{% for category, message in messages %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}{% endwith %}
+    <section class="hero">
+      <div class="hero-copy"><div class="hero-kicker">LESS CLUTTER. MORE CLARITY.</div><h2>Your files,<br><em>under control.</em></h2><p>Scan folders, spot exact duplicates, and sort files into clean categories — all from one workspace.</p></div>
+      <div class="hero-art"><div class="orb orb-one"></div><div class="orb orb-two"></div><div class="folder-illustration"><div class="folder-tab"></div><div class="folder-face"><span>PDF</span><span>IMG</span><span>DOC</span></div></div><div class="spark spark-a">✦</div><div class="spark spark-b">✧</div></div>
+      <div class="hero-foot"><span>01 / SCAN</span><span>02 / ANALYZE</span><span>03 / ORGANIZE</span></div>
+    </section>
+    <section class="scan-panel">
+      <div><div class="section-eyebrow">START HERE</div><h3>Choose a folder to analyze</h3><p>Use an absolute path, such as <code>C:\Users\You\Downloads</code> or <code>/home/you/Downloads</code>.</p></div>
+      <form class="scan-form" method="post" action="{{ url_for('index') }}"><label for="folder">Folder path</label><div class="input-row"><span class="input-icon">⌕</span><input id="folder" name="folder" value="{{ folder }}" placeholder="Enter a folder path..." required><button class="primary-btn" type="submit">Scan folder <span>↗</span></button></div></form>
+    </section>
+    <section class="stats-grid">
+      <article class="stat-card"><div class="stat-top"><span class="stat-icon purple">▤</span><span class="stat-label">FILES SCANNED</span></div><div class="stat-number">{{ summary.file_count }}</div><div class="stat-note">Across {{ summary.folder_count }} folders</div></article>
+      <article class="stat-card"><div class="stat-top"><span class="stat-icon blue">◉</span><span class="stat-label">TOTAL SIZE</span></div><div class="stat-number">{{ summary.total_size }}</div><div class="stat-note">Combined file size</div></article>
+      <article class="stat-card"><div class="stat-top"><span class="stat-icon orange">◈</span><span class="stat-label">DUPLICATE GROUPS</span></div><div class="stat-number">{{ summary.duplicate_group_count }}</div><div class="stat-note">{{ summary.duplicate_file_count }} extra copies found</div></article>
+      <article class="stat-card"><div class="stat-top"><span class="stat-icon green">↗</span><span class="stat-label">POTENTIAL SPACE</span></div><div class="stat-number">{{ summary.duplicate_size }}</div><div class="stat-note">Estimated duplicate bytes</div></article>
+    </section>
+    {% if folder %}
+    <div class="scanned-path"><span>SCANNED LOCATION</span><code>{{ folder }}</code></div>
+    <section class="charts-grid">
+      <article class="panel chart-panel"><div class="panel-heading"><div><div class="section-eyebrow">FILE DISTRIBUTION</div><h3>By category</h3></div><span class="panel-mark">01</span></div><div class="chart-wrap"><canvas id="typeChart"></canvas></div><div class="chart-foot">File counts grouped by recognized type</div></article>
+      <article class="panel chart-panel"><div class="panel-heading"><div><div class="section-eyebrow">EXTENSION MIX</div><h3>Most common extensions</h3></div><span class="panel-mark">02</span></div><div class="chart-wrap"><canvas id="extensionChart"></canvas></div><div class="chart-foot">Top extensions in the selected folder</div></article>
+    </section>
+    <section class="panel" id="duplicates"><div class="panel-heading"><div><div class="section-eyebrow">CONTENT MATCHING</div><h3>Duplicate file groups</h3><p class="panel-subtitle">Files with the same size and SHA-256 hash are treated as exact duplicates.</p></div><span class="count-chip">{{ duplicate_groups|length }} groups</span></div>
+      {% if duplicate_groups %}<div class="duplicate-list">{% for group in duplicate_groups %}<div class="duplicate-group"><div class="duplicate-size"><strong>{{ group.size }}</strong><span>{{ group.files|length }} matching files</span></div><div class="duplicate-files">{% for file in group.files %}<div class="file-line"><span class="file-badge">▧</span><div><b>{{ file.name }}</b><small>{{ file.path }}</small></div></div>{% endfor %}<code class="hash-line">SHA-256 · {{ group.hash[:24] }}…</code></div></div>{% endfor %}</div>{% else %}<div class="empty-state"><div class="empty-icon">✓</div><b>No duplicates found</b><p>Scan a folder to identify exact duplicate files.</p></div>{% endif %}
+    </section>
+    <section class="panel files-panel"><div class="panel-heading"><div><div class="section-eyebrow">INVENTORY</div><h3>Scanned files</h3></div><input id="fileSearch" class="search-input" placeholder="Search files..." aria-label="Search files"></div>
+      <div class="table-scroll"><table id="filesTable"><thead><tr><th>FILE NAME</th><th>TYPE</th><th>SIZE</th><th>LAST MODIFIED</th></tr></thead><tbody>{% for file in records %}<tr><td><div class="file-name-cell"><span class="mini-file">▧</span><div><b>{{ file.name }}</b><small>{{ file.path }}</small></div></div></td><td><span class="type-tag">{{ file.file_type }}</span></td><td>{{ file.size }}</td><td>{{ file.modified }}</td></tr>{% endfor %}</tbody></table></div>
+      {% if not records %}<div class="empty-state compact"><p>No files to display yet. Scan a folder above.</p></div>{% endif %}
+    </section>
+    {% if errors %}<section class="panel"><h3>Files skipped due to access errors</h3><p class="panel-subtitle">Some files could not be read. The scan continued for the remaining files.</p>{% for error in errors[:10] %}<p class="error-line">{{ error.path }} — {{ error.error }}</p>{% endfor %}</section>{% endif %}
+    {% else %}
+    <section class="welcome-grid"><article class="welcome-card"><span class="welcome-icon violet">◈</span><h3>Find exact duplicates</h3><p>Compare file content using SHA-256 hashes to surface redundant copies.</p><a href="#duplicates">Explore duplicate finder ↗</a></article><article class="welcome-card"><span class="welcome-icon mint">↗</span><h3>Organize by file type</h3><p>Preview a tidy category structure before moving files into it.</p><a href="#organize">Explore organizer ↗</a></article><article class="welcome-card"><span class="welcome-icon peach">▥</span><h3>Understand your files</h3><p>Review storage, extensions, and categories through dashboard charts.</p><a href="#top">View dashboard ↗</a></article></section>
+    {% endif %}
+    <section class="organize-callout" id="organize"><div class="organize-symbol">↗</div><div><h3>Ready to tidy up?</h3><p>Preview how top-level files will be grouped into category folders. Nested folders are left untouched.</p></div><form method="post" action="{{ url_for('organize') }}"><input type="hidden" name="folder" value="{{ folder }}"><button class="secondary-btn" type="submit" name="mode" value="dry-run" {% if not folder %}disabled{% endif %}>Preview organization ↗</button></form></section>
+    <footer>FILEPILOT <span>·</span> Built for a cleaner digital workspace <span class="footer-right">LOCAL-FIRST FILE MANAGEMENT</span></footer>
+  </main>
+</div>
+<script>
+window.dashboardData = {
+  typeLabels: {{ type_labels|tojson }},
+  typeValues: {{ type_values|tojson }},
+  extensionLabels: {{ extension_labels|tojson }},
+  extensionValues: {{ extension_values|tojson }}
+};
+</script>
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body></html>
